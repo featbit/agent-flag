@@ -103,10 +103,10 @@ graph TB
 
 ### Business Impact
 By implementing an Agent Flag system, teams can:
-- **Optimize Prompt Performance**: Systematically test and iterate on both individual prompts and full orchestration flows
-- **Accelerate AI Workflow Improvement**: Move from ad-hoc testing to data-driven experimentation
-- **Enhance Product Quality**: Make evidence-based decisions about which prompt strategies actually improve user outcomes
-- **Drive Growth**: Continuously refine AI-powered features based on real product metrics and business results
+- **Optimize Prompt Combinations**: Systematically test and iterate on stage-level prompt versions within the same workflow structure
+- **Accelerate Workflow Improvement**: Move from ad-hoc single-prompt testing to coordinated multi-stage combination experimentation
+- **Enhance Product Quality**: Make evidence-based decisions about which cross-stage prompt combinations actually improve user outcomes
+- **Drive Growth**: Continuously refine AI-powered features by optimizing prompt selections at every workflow stage based on real product metrics
 
 ---
 
@@ -229,15 +229,16 @@ graph TB
         U4[International<br/>Multi-lingual]
     end
     
-    subgraph Variants[Optimized Flow Variants]
-        V1[Flow A<br/>Detailed + Technical]
-        V2[Flow B<br/>Concise + Friendly]
-        V3[Flow C<br/>Formal + Auditable]
-        V4[Flow D<br/>Localized + Cultural]
+    subgraph WF[Same Workflow Structure: Stage 1 → Stage 2 → Stage 3]
+        direction TB
+        C1[Combo A<br/>S1:P_v2 → S2:P_v1 → S3:P_v3]
+        C2[Combo B<br/>S1:P_v1 → S2:P_v2 → S3:P_v1]
+        C3[Combo C<br/>S1:P_v3 → S2:P_v1 → S3:P_v2]
+        C4[Combo D<br/>S1:P_v1 → S2:P_v3 → S3:P_v1]
     end
     
     subgraph AF[Agent Flag Router]
-        R[Intelligent Routing]
+        R[Intelligent Routing<br/>Based on User Context]
     end
     
     U1 --> R
@@ -245,65 +246,77 @@ graph TB
     U3 --> R
     U4 --> R
     
-    R -->|Best match| V1
-    R -->|Best match| V2
-    R -->|Best match| V3
-    R -->|Best match| V4
+    R -->|Best match| C1
+    R -->|Best match| C2
+    R -->|Best match| C3
+    R -->|Best match| C4
     
-    V1 -.Metrics.-> R
-    V2 -.Metrics.-> R
-    V3 -.Metrics.-> R
-    V4 -.Metrics.-> R
+    C1 -.Metrics.-> R
+    C2 -.Metrics.-> R
+    C3 -.Metrics.-> R
+    C4 -.Metrics.-> R
     
     classDef user fill:#ffe6f0,stroke:#cc0066
-    classDef variant fill:#e6f3ff,stroke:#0066cc
+    classDef combo fill:#e6f3ff,stroke:#0066cc
     classDef router fill:#e6ffe6,stroke:#00cc66
     class U1,U2,U3,U4 user
-    class V1,V2,V3,V4 variant
+    class C1,C2,C3,C4 combo
     class R router
 ```
 
 ### Thousand Faces, Thousand Flows
 
-Rather than forcing all users through a single "optimal" workflow, Agent Flag enables:
+Rather than forcing all users through a single "optimal" prompt combination, Agent Flag enables **personalized stage-level prompt selection** within the same workflow structure.
 
-**1. Segment-Specific Optimization**
-- Maintain multiple production-grade prompt combinations simultaneously
-- Each variant optimized for specific user cohorts or usage patterns
-- Continuous A/B testing within segments to refine performance
+**1. Segment-Specific Prompt Combinations**
+- Maintain multiple production-grade **prompt version combinations** simultaneously for the same workflow structure
+- Each combination optimized for specific user cohorts or usage patterns
+- Example: Same 3-stage workflow, but Stage 1 uses Prompt v2 for power users vs. Prompt v1 for casual users
+- Continuous A/B testing within segments to refine which prompt versions work best at each stage
 
-**2. Context-Aware Routing**
-- Route users to the workflow variant that historically performs best for their profile
-- Adapt based on:
-  - User expertise level
-  - Industry/domain context
-  - Language and cultural preferences
-  - Device/platform constraints
-  - Time sensitivity
+**2. Context-Aware Prompt Routing**
+- Route users to the **stage-prompt combination** that historically performs best for their profile
+- Same workflow stages, different prompt versions selected based on:
+  - User expertise level (technical vs. simplified prompts)
+  - Industry/domain context (specialized terminology vs. general language)
+  - Language and cultural preferences (localized prompts)
+  - Device/platform constraints (concise vs. detailed prompts)
+  - Time sensitivity (quick response vs. thorough analysis prompts)
 
-**3. Perpetual Optimization**
-- Every segment runs independent experiments
-- Winning strategies in one segment can inspire variants for others
-- Gradual evolution of each flow based on its specific audience
+**3. Perpetual Combination Optimization**
+- Every segment runs independent experiments on **stage-level prompt versions**
+- Winning prompt choices in one stage can be tested across different user segments
+- Gradual evolution of optimal prompt combinations for each audience, while maintaining the same workflow structure
 
 ### Real-World Example
 
+**Scenario**: A customer support AI assistant with a fixed 3-stage workflow:
+- **Stage 1**: Intent Classification
+- **Stage 2**: Information Retrieval  
+- **Stage 3**: Response Generation
+
+Each stage has multiple prompt versions. Agent Flag routes different user segments to optimal combinations:
+
 ```mermaid
-graph LR
+graph TB
     subgraph Segment1[Tech Enthusiasts - 25%]
-        F1[Flow: Detailed<br/>3-stage deep analysis<br/>Conv: 28%<br/>Tokens: 2.5K]
+        direction LR
+        F1["Combo A<br/>━━━━━━━<br/>Stage 1: Technical_v2<br/>Stage 2: Detailed_v3<br/>Stage 3: Code_Examples_v1<br/>━━━━━━━<br/>Conv: 28% | Tokens: 2.5K"]
     end
     
     subgraph Segment2[Business Users - 50%]
-        F2[Flow: Executive Summary<br/>2-stage concise<br/>Conv: 22%<br/>Tokens: 1.2K]
+        direction LR
+        F2["Combo B<br/>━━━━━━━<br/>Stage 1: Business_v1<br/>Stage 2: Summary_v2<br/>Stage 3: Action_Oriented_v2<br/>━━━━━━━<br/>Conv: 22% | Tokens: 1.2K"]
     end
     
     subgraph Segment3[Researchers - 15%]
-        F3[Flow: Academic<br/>4-stage with citations<br/>Conv: 35%<br/>Tokens: 3.8K]
+        direction LR
+        F3["Combo C<br/>━━━━━━━<br/>Stage 1: Academic_v1<br/>Stage 2: Comprehensive_v1<br/>Stage 3: Citations_v3<br/>━━━━━━━<br/>Conv: 35% | Tokens: 3.8K"]
     end
     
     subgraph Segment4[Mobile Users - 10%]
-        F4[Flow: Quick Response<br/>1-stage optimized<br/>Conv: 18%<br/>Tokens: 600]
+        direction LR
+        F4["Combo D<br/>━━━━━━━<br/>Stage 1: Quick_v3<br/>Stage 2: Concise_v2<br/>Stage 3: Mobile_Optimized_v1<br/>━━━━━━━<br/>Conv: 18% | Tokens: 600"]
     end
     
     classDef best fill:#d4edda,stroke:#28a745
@@ -315,7 +328,9 @@ graph LR
     class F4 okay
 ```
 
-**Outcome**: Instead of averaging to a 23% conversion across all users, each segment gets its optimal experience, resulting in a blended 26% overall conversion while maintaining cost efficiency through per-segment token optimization.
+**Key Insight**: All segments go through the **same 3-stage workflow structure**, but each stage selects different prompt versions based on user context.
+
+**Outcome**: Instead of forcing all users through a single "average" prompt combination (resulting in ~23% conversion), each segment gets its optimal stage-prompt pairing, achieving a blended **26% overall conversion** while maintaining cost efficiency through per-segment token optimization.
 
 ---
 
@@ -323,10 +338,10 @@ graph LR
 
 Agent Flag transforms AI workflow management from reactive to proactive, from monolithic to personalized:
 
-1. **Unified Experimentation**: Seamlessly manage both single-prompt and multi-stage combinations
-2. **Autonomous Intelligence**: Self-optimizing rollouts based on integrated observability data
-3. **Cost-Aware Optimization**: Balance quality, latency, and token consumption automatically
-4. **Segment Personalization**: Maintain multiple optimal flows for diverse user populations
-5. **Continuous Evolution**: Never stop improving - every interaction feeds the optimization loop
+1. **Unified Experimentation**: Seamlessly manage both single-stage prompt versions and cross-stage prompt combinations within the same workflow structure
+2. **Autonomous Intelligence**: Self-optimizing rollouts based on integrated observability data, automatically adjusting which prompt versions are used at each stage
+3. **Cost-Aware Optimization**: Balance quality, latency, and token consumption automatically by selecting optimal prompt combinations
+4. **Segment Personalization**: Maintain multiple optimal stage-prompt combinations for the same workflow, tailored to diverse user populations
+5. **Continuous Evolution**: Never stop improving - every interaction feeds the optimization loop, refining prompt selection at every stage
 
-This is the future of AI product development: intelligent, adaptive, and relentlessly focused on delivering the best possible experience to every user.
+This is the future of AI product development: intelligent, adaptive, and relentlessly focused on delivering the best possible experience to every user through **precise stage-level prompt orchestration** within consistent workflow structures.
