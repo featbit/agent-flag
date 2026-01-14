@@ -25,8 +25,8 @@ graph LR
 	P1A -. ad hoc logic .-> P2C
 	P2C -. opaque path .-> P3B
 
-	Note over P1A,P3B: Metric alignment unclear<br/>Traceability lost
-
 	classDef risk fill:#ffe0e0,stroke:#ff4d4f
 	class P2C,P3B risk
 ```
+
+**Challenge**: Metric alignment is unclear across combinations, and traceability is lost in ad-hoc routing logic.
