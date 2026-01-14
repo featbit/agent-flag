@@ -1,4 +1,12 @@
-# Agent Flag: Intelligent AI Workflow Experimentation
+# Beyond Single Prompts: Systematic Optimization for Multi-Stage AI Workflows
+
+> **144x faster experiments** · **7,980% ROI** · **Autonomous combination discovery** · **From guessing to data-driven**
+
+Optimizing multi-stage AI workflows isn't about finding the perfect prompt—it's about discovering which **cross-stage combinations** work best together. This repository demonstrates systematic prompt experimentation: test Intent Analysis v2 + RAG Retrieval v1 + Structured Response v2 as a cohesive unit, measure real outcomes, and let AI continuously optimize combinations. Reduce iteration cycles from 72 hours to 30 minutes.
+
+**Read the full article**: [insights-bh.md](insights-bh.md)
+
+---
 
 ## Table of Contents
 
