@@ -8,13 +8,20 @@
 3. [The Agent Flag Solution](#the-agent-flag-solution)
    - [Core Capabilities](#core-capabilities)
    - [Business Impact](#business-impact)
-4. [Autonomous Experimentation Through OpenTelemetry Integration](#autonomous-experimentation-through-opentelemetry-integration)
+4. [The Feature Flag Solution: Zero-Code Workflow Management](#the-feature-flag-solution-zero-code-workflow-management)
+   - [How It Works: Two-Layer Flag Architecture](#how-it-works-two-layer-flag-architecture)
+   - [The Magic: Composite Key Strategy](#the-magic-composite-key-strategy)
+   - [Flexible Workflow Assignment Strategies](#flexible-workflow-assignment-strategies)
+   - [What Gets Stored in Feature Flags](#what-gets-stored-in-feature-flags)
+   - [Key Benefits](#key-benefits)
+5. [Autonomous Experimentation Through OpenTelemetry Integration](#autonomous-experimentation-through-opentelemetry-integration)
    - [Autonomous Capabilities](#autonomous-capabilities)
-5. [Personalization at Scale: Multi-Variant Optimization](#personalization-at-scale-multi-variant-optimization)
+6. [Personalization at Scale: Multi-Variant Optimization](#personalization-at-scale-multi-variant-optimization)
    - [The Multi-Persona Challenge](#the-multi-persona-challenge)
    - [Thousand Faces, Thousand Flows](#thousand-faces-thousand-flows)
    - [Real-World Example](#real-world-example)
-6. [Summary: The Agent Flag Advantage](#summary-the-agent-flag-advantage)
+7. [Summary: The Agent Flag Advantage](#summary-the-agent-flag-advantage)
+8. [Appendix: Code Implementation with FeatBit Node SDK](#appendix-code-implementation-with-featbit-node-sdk)
 
 ---
 
