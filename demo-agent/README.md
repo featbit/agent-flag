@@ -1,22 +1,24 @@
 # Agent Flag Demo - TypeScript
 
-A simple demonstration of how Agent Flag works with multi-stage AI workflows using FeatBit feature flags.
+A demonstration of how Agent Flag works with multi-stage AI workflows using FeatBit feature flags and real Azure OpenAI integration.
 
 ## Architecture
 
 This demo implements a 3-stage customer support workflow:
 
-1. **Intent Analysis** - Classifies customer inquiries
-2. **Information Retrieval** - Retrieves relevant information based on intent
-3. **Response Generation** - Generates customer-facing response
+1. **Intent Analysis** - Uses Azure OpenAI to classify customer inquiries
+2. **Information Retrieval** - Uses Azure OpenAI to retrieve relevant documents
+3. **Response Generation** - Uses Azure OpenAI to generate customer-facing responses
 
 ## Features
 
+- ✅ Real Azure OpenAI integration for all stages
 - ✅ Multi-stage workflow orchestration
 - ✅ Feature flag-based prompt combination management
 - ✅ Support for A/B testing different prompt versions
-- ✅ Mock implementations for easy demonstration
+- ✅ Automatic fallback if AI calls fail
 - ✅ User segmentation based on inquiry type
+- ✅ Two versions: simple (`index.ts`) and optimized (`app-optimized.ts`)
 
 ## Setup
 
@@ -24,22 +26,36 @@ This demo implements a 3-stage customer support workflow:
 # Install dependencies
 pnpm install
 
-# Build the project
-pnpm run build
+# Configure environment variables
+cp .env.example .env
+# Edit .env and add your FeatBit and Azure OpenAI credentials
 
-# Run the demo
-pnpm start
-
-# Or run directly with ts-node
+# Run the optimized demo (recommended)
 pnpm run dev
+
+# Or run the simple version
+pnpm run dev:simple
 ```
 
 ## Configuration
 
-Update the FeatBit configuration in `src/config.ts`:
-- `envSecret`: Your FeatBit environment secret
-- `streamingUri`: FeatBit streaming endpoint
-- `eventsUri`: FeatBit events endpoint
+### FeatBit
+Create a `.env` file with your FeatBit credentials:
+```env
+FEATBIT_SDK_KEY=your_sdk_key_here
+FEATBIT_STREAMING_URI=wss://global-eval.featbit.co
+FEATBIT_EVENTS_URI=https://global-eval.featbit.co
+```
+
+### Azure OpenAI
+Add your Azure OpenAI credentials to `.env`:
+```env
+AZURE_RESOURCE_NAME=your_azure_resource_name
+AZURE_API_KEY=your_azure_api_key
+AZURE_MODEL_NAME=gpt-4
+```
+
+See [AZURE_OPENAI_INTEGRATION.md](./AZURE_OPENAI_INTEGRATION.md) for detailed setup instructions.
 
 ## Workflow Combinations
 

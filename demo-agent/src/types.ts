@@ -61,4 +61,5 @@ export interface WorkflowResult {
   intent: IntentResult;
   retrieval: RetrievalResult;
   response: ResponseResult;
+  executionTimeMs: number;
 }

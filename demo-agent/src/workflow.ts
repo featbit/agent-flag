@@ -14,10 +14,7 @@ export async function executeWorkflow(
   client: IFbClient,
   inquiry: CustomerInquiry
 ): Promise<WorkflowResult> {
-  console.log(`\n${'='.repeat(60)}`);
-  console.log(`🚀 Processing inquiry: ${inquiry.id}`);
-  console.log(`   User: ${inquiry.userId}, Type: ${inquiry.type}`);
-  console.log(`${'='.repeat(60)}`);
+  const startTime = Date.now();
   
   // Step 1: Build user using UserBuilder (FeatBit best practice)
   const user = new UserBuilder(inquiry.userId)
@@ -25,14 +22,12 @@ export async function executeWorkflow(
     .build();
   
   // Step 2: Get workflow combo from flag
-  console.log('\n📋 [Flag Evaluation] Getting workflow combination...');
   const workflowFlag = await client.jsonVariation(
     flagKeys.workflow,
     user,
     { combo: workflowCombos.COMBO_A }
   );
   const combo = workflowFlag.combo as string;
-  console.log(`   Assigned combo: ${combo}`);
   
   // Step 3: Add combo to user context for stage flags
   const userWithCombo = new UserBuilder(inquiry.userId)
@@ -68,15 +63,12 @@ export async function executeWorkflow(
   const response = await generateResponse(intent, retrieval, responseConfig);
   
   // Return complete workflow result
-  console.log(`\n${'='.repeat(60)}`);
-  console.log('✅ Workflow completed successfully');
-  console.log(`${'='.repeat(60)}`);
-  
   return {
     combo,
     intent,
     retrieval,
-    response
+    response,
+    executionTimeMs: Date.now() - startTime
   };
 }
 

@@ -6,7 +6,7 @@
  */
 export const featbitConfig = {
   // Your FeatBit environment secret key (SDK Key)
-  sdkKey: process.env.FEATBIT_SDK_KEY || '_Gmd7OF3FECJsGwmd_f1nQ19IYD1kroUu27N-wKg9Kyw',
+  sdkKey: process.env.FEATBIT_SDK_KEY,
   
   // FeatBit streaming endpoint (WebSocket)
   streamingUri: process.env.FEATBIT_STREAMING_URI || 'wss://global-eval.featbit.co',
