@@ -22,32 +22,40 @@
 
 In modern AI orchestration flows, every stage owns its own prompt (often with multiple revisions or wrappers), so swapping a single prompt for an experiment is easy, but coordinating a full end-to-end combination of prompt variants is brittle: engineers end up hard-coding `if/else` ladders or tangled config files just to express pairings, the cross-stage combinations cannot be visualized or audited, and experiment runs rarely sync with product metrics, making it impossible to tell which compound prompt stack actually improved conversion, latency, or safety rates.
 
+**Example Workflow**: Customer Intent Analysis → Information Retrieval → Response Generation
+
 ```mermaid
 graph LR
-	subgraph Stage 1
-		P1A[Prompt v1]
-		P1B[Prompt v2]
+	subgraph S1["Stage 1: Intent Analysis"]
+		P1A["Intent_v1<br/>(original prompt)"]
+		P1B["Intent_v2<br/>(optimized prompt)"]
 	end
 
-	subgraph Stage 2
-		P2A[Prompt v1]
-		P2B[Prompt v2]
-		P2C[Wrapper CC]
+	subgraph S2["Stage 2: Info Retrieval"]
+		P2A["Retrieval_v1"]
+		P2B["Retrieval_v2"]
+		P2C["Retrieval_RAG_v1<br/>(different strategy)"]
 	end
 
-	subgraph Stage 3
-		P3A[Prompt v1]
-		P3B[Prompt with Toolchain]
+	subgraph S3["Stage 3: Response Gen"]
+		P3A["Response_v1"]
+		P3B["Response_Structured_v1<br/>(different strategy)"]
 	end
 
 	P1A -->|Combo A| P2A --> P3A
 	P1B -->|Combo B| P2B --> P3B
-	P1A -. ad hoc logic .-> P2C
-	P2C -. opaque path .-> P3B
+	P1A -. "ad hoc logic<br/>(hard to maintain)" .-> P2C
+	P2C -. "opaque routing<br/>(no visibility)" .-> P3B
 
 	classDef risk fill:#ffe0e0,stroke:#ff4d4f
 	class P2C,P3B risk
 ```
+
+**Two Types of Variations**:
+- **Version Iterations** (e.g., `Intent_v1` → `Intent_v2`): Same task, same approach, but optimized prompt content (improved system/user prompts, refined instructions)
+- **Strategy Alternatives** (e.g., `Retrieval_v1` vs `Retrieval_RAG_v1`): Same task goal (same input/output contract), but completely different implementation strategies (e.g., direct retrieval vs RAG pattern)
+
+**Note**: Each stage independently manages its own prompt versions and strategy variants. The combinatorial challenge emerges when trying to systematically test how these cross-stage selections interact.
 
 **Two Core Challenges**:
 
@@ -70,9 +78,13 @@ A better approach leverages **feature flag logic** to build an **Agent Flag** sy
 
 ### Core Capabilities
 1. **Single-Stage Prompt Versioning**: Enable/disable or gradually roll out individual prompt variants within a single task or stage
+   - Example: Test `Intent_v1` vs `Intent_v2` in Stage 1 (Intent Analysis)
 2. **Combinatorial Stage Management**: Define and control multi-stage prompt combinations as cohesive experiments
+   - Example: Coordinate `Intent_v2` + `Retrieval_RAG_v1` + `Response_Structured_v1` as Combo A
 3. **Experiment Rollout**: Deploy prompt combinations to specific user segments or percentage-based traffic splits
+   - Example: Route 20% traffic to Combo A, 80% to baseline combination
 4. **Metric Integration**: Directly tie prompt combination experiments to product KPIs, conversion funnels, and performance metrics
+   - Example: Track how Intent_v2 + Retrieval_RAG_v1 combo affects resolution time and customer satisfaction
 
 ```mermaid
 graph TB
@@ -116,10 +128,10 @@ By integrating **OpenTelemetry** as the telemetry backbone, Agent Flag can bridg
 
 ```mermaid
 flowchart LR
-    subgraph Experiments
-        E1[Prompt Combo A<br/>20% traffic]
-        E2[Prompt Combo B<br/>30% traffic]
-        E3[Prompt Combo C<br/>50% traffic]
+    subgraph Experiments["Customer Support Workflow Experiments"]
+        E1["Combo A: 20%<br/>Intent_v1 + Retrieval_v1 + Response_v1"]
+        E2["Combo B: 30%<br/>Intent_v2 + Retrieval_v2 + Response_v1"]
+        E3["Combo C: 50%<br/>Intent_v2 + Retrieval_RAG_v1 + Response_Structured_v1"]
     end
     
     subgraph Telemetry[OpenTelemetry Pipeline]
@@ -220,21 +232,23 @@ In the AI era, one-size-fits-all approaches are obsolete. Modern AI products mus
 
 ### The Multi-Persona Challenge
 
+**Continuing our customer support workflow example**: All user segments go through the same 3-stage workflow (Intent Analysis → Info Retrieval → Response Generation), but optimal prompt combinations differ by segment.
+
 ```mermaid
 graph TB
     subgraph Users[User Segments]
-        U1[Power Users<br/>Tech-savvy]
-        U2[Casual Users<br/>Simple needs]
-        U3[Enterprise Users<br/>Compliance-focused]
-        U4[International<br/>Multi-lingual]
+        U1[Tech-Savvy Users<br/>Developers & Engineers]
+        U2[Business Users<br/>Product Managers]
+        U3[Enterprise Admins<br/>Compliance-focused]
+        U4[Mobile Users<br/>On-the-go access]
     end
     
-    subgraph WF[Same Workflow Structure: Stage 1 → Stage 2 → Stage 3]
+    subgraph WF["Same Workflow: Intent Analysis → Info Retrieval → Response Generation"]
         direction TB
-        C1[Combo A<br/>S1:P_v2 → S2:P_v1 → S3:P_v3]
-        C2[Combo B<br/>S1:P_v1 → S2:P_v2 → S3:P_v1]
-        C3[Combo C<br/>S1:P_v3 → S2:P_v1 → S3:P_v2]
-        C4[Combo D<br/>S1:P_v1 → S2:P_v3 → S3:P_v1]
+        C1["Combo A<br/>Intent_v2 + Retrieval_RAG_v1 + Response_Technical_v1"]
+        C2["Combo B<br/>Intent_v2 + Retrieval_v2 + Response_v2"]
+        C3["Combo C<br/>Intent_v1 + Retrieval_v1 + Response_Formal_v1"]
+        C4["Combo D<br/>Intent_Quick_v1 + Retrieval_v2 + Response_Concise_v1"]
     end
     
     subgraph AF[Agent Flag Router]
@@ -290,33 +304,33 @@ Rather than forcing all users through a single "optimal" prompt combination, Age
 
 ### Real-World Example
 
-**Scenario**: A customer support AI assistant with a fixed 3-stage workflow:
-- **Stage 1**: Intent Classification
-- **Stage 2**: Information Retrieval  
-- **Stage 3**: Response Generation
+**Scenario**: A SaaS company's customer support AI assistant handles technical inquiries through a fixed 3-stage workflow:
+- **Stage 1**: Intent Analysis - Classify user intent (bug report, feature request, how-to question)
+- **Stage 2**: Information Retrieval - Fetch relevant documentation, past tickets, or knowledge base articles
+- **Stage 3**: Response Generation - Synthesize information into a helpful response
 
-Each stage has multiple prompt versions. Agent Flag routes different user segments to optimal combinations:
+Each stage has multiple prompt versions and strategy variants. Agent Flag routes different user segments to optimal combinations:
 
 ```mermaid
 graph TB
-    subgraph Segment1[Tech Enthusiasts - 25%]
+    subgraph Segment1["Tech-Savvy Users (Developers) - 25%"]
         direction LR
-        F1["Combo A<br/>━━━━━━━<br/>Stage 1: Technical_v2<br/>Stage 2: Detailed_v3<br/>Stage 3: Code_Examples_v1<br/>━━━━━━━<br/>Conv: 28% | Tokens: 2.5K"]
+        F1["Combo A<br/>━━━━━━━━━━━<br/>Stage 1: Intent_v2 (detailed classification)<br/>Stage 2: Retrieval_RAG_v1 (code-aware search)<br/>Stage 3: Response_Technical_v1 (with code snippets)<br/>━━━━━━━━━━━<br/>Resolution: 78% | Satisfaction: 4.5/5<br/>Avg Tokens: 2.8K | Latency: 3.2s"]
     end
     
-    subgraph Segment2[Business Users - 50%]
+    subgraph Segment2["Business Users (PMs, Analysts) - 50%"]
         direction LR
-        F2["Combo B<br/>━━━━━━━<br/>Stage 1: Business_v1<br/>Stage 2: Summary_v2<br/>Stage 3: Action_Oriented_v2<br/>━━━━━━━<br/>Conv: 22% | Tokens: 1.2K"]
+        F2["Combo B<br/>━━━━━━━━━━━<br/>Stage 1: Intent_v2 (business-focused)<br/>Stage 2: Retrieval_v2 (documentation-focused)<br/>Stage 3: Response_v2 (executive summary style)<br/>━━━━━━━━━━━<br/>Resolution: 65% | Satisfaction: 4.2/5<br/>Avg Tokens: 1.5K | Latency: 2.1s"]
     end
     
-    subgraph Segment3[Researchers - 15%]
+    subgraph Segment3["Enterprise Admins - 15%"]
         direction LR
-        F3["Combo C<br/>━━━━━━━<br/>Stage 1: Academic_v1<br/>Stage 2: Comprehensive_v1<br/>Stage 3: Citations_v3<br/>━━━━━━━<br/>Conv: 35% | Tokens: 3.8K"]
+        F3["Combo C<br/>━━━━━━━━━━━<br/>Stage 1: Intent_v1 (compliance-aware)<br/>Stage 2: Retrieval_v1 (security doc prioritized)<br/>Stage 3: Response_Formal_v1 (audit-friendly)<br/>━━━━━━━━━━━<br/>Resolution: 82% | Satisfaction: 4.7/5<br/>Avg Tokens: 2.2K | Latency: 2.8s"]
     end
     
-    subgraph Segment4[Mobile Users - 10%]
+    subgraph Segment4["Mobile Users - 10%"]
         direction LR
-        F4["Combo D<br/>━━━━━━━<br/>Stage 1: Quick_v3<br/>Stage 2: Concise_v2<br/>Stage 3: Mobile_Optimized_v1<br/>━━━━━━━<br/>Conv: 18% | Tokens: 600"]
+        F4["Combo D<br/>━━━━━━━━━━━<br/>Stage 1: Intent_Quick_v1 (fast classification)<br/>Stage 2: Retrieval_v2 (top-3 results only)<br/>Stage 3: Response_Concise_v1 (mobile-optimized)<br/>━━━━━━━━━━━<br/>Resolution: 58% | Satisfaction: 3.9/5<br/>Avg Tokens: 680 | Latency: 1.4s"]
     end
     
     classDef best fill:#d4edda,stroke:#28a745
@@ -328,9 +342,19 @@ graph TB
     class F4 okay
 ```
 
-**Key Insight**: All segments go through the **same 3-stage workflow structure**, but each stage selects different prompt versions based on user context.
+**Key Insight**: All segments go through the **same 3-stage workflow structure** (Intent Analysis → Information Retrieval → Response Generation), but each stage selects different prompt versions based on user context.
 
-**Outcome**: Instead of forcing all users through a single "average" prompt combination (resulting in ~23% conversion), each segment gets its optimal stage-prompt pairing, achieving a blended **26% overall conversion** while maintaining cost efficiency through per-segment token optimization.
+**Detailed Breakdown**:
+- **Developers** get technical, code-aware responses with RAG-enhanced retrieval → High satisfaction, higher token cost acceptable
+- **Business Users** get concise, actionable summaries optimized for quick decisions → Balanced performance and cost
+- **Enterprise Admins** get formal, compliance-ready responses with audit trails → Highest resolution rate for critical queries
+- **Mobile Users** get ultra-fast, concise responses optimized for small screens → Lower resolution but acceptable for on-the-go usage
+
+**Business Outcome**: Instead of forcing all users through a single "average" prompt combination (baseline: 68% resolution, 4.1/5 satisfaction, 1.8K tokens), each segment gets its optimal stage-prompt pairing:
+- **Overall resolution rate improved to 71%** (from 68%)
+- **Overall satisfaction improved to 4.3/5** (from 4.1/5)
+- **Cost optimized**: High-value users (Enterprise Admins, Developers) use premium combos; mobile users use efficient combos
+- **Total token efficiency**: 15% cost reduction through segment-specific optimization
 
 ---
 
