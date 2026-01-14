@@ -22,7 +22,13 @@
 
 In modern AI orchestration flows, every stage owns its own prompt (often with multiple revisions or wrappers), so swapping a single prompt for an experiment is easy, but coordinating a full end-to-end combination of prompt variants is brittle: engineers end up hard-coding `if/else` ladders or tangled config files just to express pairings, the cross-stage combinations cannot be visualized or audited, and experiment runs rarely sync with product metrics, making it impossible to tell which compound prompt stack actually improved conversion, latency, or safety rates.
 
-**Example Workflow**: Customer Intent Analysis → Information Retrieval → Response Generation
+## Pain Scenario: Combinatorial Prompt Management
+
+In modern AI orchestration flows, every stage owns its own prompt (often with multiple revisions or wrappers), so swapping a single prompt for an experiment is easy, but coordinating a full end-to-end combination of prompt variants is brittle: engineers end up hard-coding `if/else` ladders or tangled config files just to express pairings, the cross-stage combinations cannot be visualized or audited, and experiment runs rarely sync with product metrics, making it impossible to tell which compound prompt stack actually improved conversion, latency, or safety rates.
+
+### Scenario 1: Fixed-Stage Workflows
+
+**Example**: Customer Intent Analysis → Information Retrieval → Response Generation
 
 ```mermaid
 graph LR
@@ -51,17 +57,61 @@ graph LR
 	class P2C,P3B risk
 ```
 
-**Two Types of Variations**:
-- **Version Iterations** (e.g., `Intent_v1` → `Intent_v2`): Same task, same approach, but optimized prompt content (improved system/user prompts, refined instructions)
-- **Strategy Alternatives** (e.g., `Retrieval_v1` vs `Retrieval_RAG_v1`): Same task goal (same input/output contract), but completely different implementation strategies (e.g., direct retrieval vs RAG pattern)
+### Scenario 2: Dynamic Agent Flows (e.g., Claude Code, Agentic Systems)
 
-**Note**: Each stage independently manages its own prompt versions and strategy variants. The combinatorial challenge emerges when trying to systematically test how these cross-stage selections interact.
+**Example**: AI coding assistant that dynamically selects tools, skills, and MCPs based on task
+
+```mermaid
+graph TB
+    subgraph Think["Thinking Phase"]
+        T1["System Prompt v1"]
+        T2["System Prompt v2<br/>(reasoning-focused)"]
+    end
+    
+    subgraph Tools["Available Tools/Skills"]
+        S1["Code Search Skill v1"]
+        S2["Code Search Skill v2<br/>(semantic)"]
+        M1["Git MCP v1"]
+        M2["Git MCP v2<br/>(enhanced)"]
+        D1["Debug Script v1"]
+        D2["Debug Script v2"]
+    end
+    
+    subgraph Decision["Agent Decision Logic"]
+        A[Which tools to use?<br/>Which skill version?<br/>Which MCP?]
+    end
+    
+    Think --> Decision
+    Decision -.ad hoc selection.-> Tools
+    
+    S1 -.Version conflicts.-> S2
+    M1 -.Unclear routing.-> M2
+    
+    classDef risk fill:#ffe0e0,stroke:#ff4d4f
+    class A,S2,M2 risk
+```
+
+**Challenge**: When an AI agent can dynamically choose from multiple tools, skills, or MCPs—each with their own versions—how do you systematically test which **combination** of tool versions works best? Hard-coding version selection in agent logic is inflexible and prevents experimentation.
+
+---
+
+### Common Pain Points Across Both Scenarios
+
+**Two Types of Variations**:
+- **Version Iterations** (e.g., `Intent_v1` → `Intent_v2` or `CodeSearch_v1` → `CodeSearch_v2`): Same task, same approach, but optimized prompt content (improved system/user prompts, refined instructions)
+- **Strategy Alternatives** (e.g., `Retrieval_v1` vs `Retrieval_RAG_v1` or `Git_MCP_v1` vs `Git_MCP_Enhanced_v2`): Same task goal (same input/output contract), but completely different implementation strategies
 
 **Two Core Challenges**:
 
-1. **Cross-Stage Version Composition**: Configuring and managing version combinations across multiple stages is operationally complex. Teams struggle to coordinate which prompt variant in Stage 1 should pair with which variants in Stage 2 and 3, leading to brittle hard-coded logic or unmaintainable configuration files.
+1. **Cross-Component Version Composition**: 
+   - **Fixed Workflows**: Coordinating which prompt variant in Stage 1 should pair with which variants in Stage 2 and 3
+   - **Dynamic Agents**: Managing which skill/MCP/tool versions should be available together in the agent's context
+   - Both lead to brittle hard-coded logic or unmaintainable configuration files
 
-2. **Metrics Testing for Combinations**: Testing and measuring metrics based on these cross-stage combinations is equally difficult. Without a systematic approach, it's nearly impossible to attribute changes in product metrics (conversion rates, latency, safety scores) to specific prompt combination experiments.
+2. **Metrics Testing for Combinations**: 
+   - **Fixed Workflows**: Which combo (Intent_v2 + RAG_v1 + Response_v2) actually improves resolution rate?
+   - **Dynamic Agents**: Which tool version set (CodeSearch_v2 + Git_MCP_v2 + Debug_v1) makes the agent more effective?
+   - Without systematic testing, attributing improvements to specific combinations is nearly impossible
 
 ---
 
@@ -74,17 +124,29 @@ These pain points cannot be adequately solved by LLM observability tools like **
 
 ## The Agent Flag Solution
 
-A better approach leverages **feature flag logic** to build an **Agent Flag** system specifically designed for AI orchestration:
+A better approach leverages **feature flag logic** to build an **Agent Flag** system specifically designed for AI orchestration—supporting both **fixed-stage workflows** and **dynamic agentic systems**:
 
 ### Core Capabilities
+
+**For Fixed Workflows**:
 1. **Single-Stage Prompt Versioning**: Enable/disable or gradually roll out individual prompt variants within a single task or stage
    - Example: Test `Intent_v1` vs `Intent_v2` in Stage 1 (Intent Analysis)
 2. **Combinatorial Stage Management**: Define and control multi-stage prompt combinations as cohesive experiments
    - Example: Coordinate `Intent_v2` + `Retrieval_RAG_v1` + `Response_Structured_v1` as Combo A
-3. **Experiment Rollout**: Deploy prompt combinations to specific user segments or percentage-based traffic splits
-   - Example: Route 20% traffic to Combo A, 80% to baseline combination
-4. **Metric Integration**: Directly tie prompt combination experiments to product KPIs, conversion funnels, and performance metrics
-   - Example: Track how Intent_v2 + Retrieval_RAG_v1 combo affects resolution time and customer satisfaction
+
+**For Dynamic Agents** (Claude Code, Agentic Systems):
+1. **Tool/Skill Version Control**: Dynamically control which versions of skills, MCPs, or tools are available to the agent
+   - Example: Route beta users to `CodeSearch_Semantic_v2` while others use `CodeSearch_v1`
+2. **Agent Configuration Sets**: Define coherent tool/skill combinations that work well together
+   - Example: "Performance Combo" = `Git_MCP_v2` + `CodeSearch_Semantic_v2` + `Debug_Enhanced_v1`
+3. **Tool-as-Feature-Flag Integration**: Agent queries feature flags as tools during execution to get current configurations
+   - Example: Agent calls `get_code_search_config()` tool → Returns configuration for assigned skill version
+
+**Universal Capabilities**:
+3. **Experiment Rollout**: Deploy combinations to specific user segments or percentage-based traffic splits
+   - Example: Route 20% traffic to Combo A, 80% to baseline
+4. **Metric Integration**: Directly tie experiments to product KPIs, conversion funnels, and performance metrics
+   - Example: Track how specific tool version combinations affect task completion rate
 
 ```mermaid
 graph TB
@@ -119,6 +181,273 @@ By implementing an Agent Flag system, teams can:
 - **Accelerate Workflow Improvement**: Move from ad-hoc single-prompt testing to coordinated multi-stage combination experimentation
 - **Enhance Product Quality**: Make evidence-based decisions about which cross-stage prompt combinations actually improve user outcomes
 - **Drive Growth**: Continuously refine AI-powered features by optimizing prompt selections at every workflow stage based on real product metrics
+
+---
+
+## The Feature Flag Solution: Zero-Code Workflow Management
+
+The true power of the Agent Flag approach lies in its **developer-friendly implementation**: **integrate once, experiment forever—without touching production code**.
+
+### How It Works: Two-Layer Flag Architecture
+
+```mermaid
+graph TB
+    subgraph FeatBit["FeatBit Platform"]
+        WF["🎯 Workflow Flag<br/>'customer-support-workflow'<br/>Variations: combo_a, combo_b, combo_c"]
+        S1F["Stage 1 Flag<br/>'intent-analysis'"]
+        S2F["Stage 2 Flag<br/>'retrieval-strategy'"]
+        S3F["Stage 3 Flag<br/>'response-generation'"]
+    end
+    
+    subgraph App["Your AI Application"]
+        U["👤 User: user_123<br/>Context: critical_bug"]
+        R["Router: Check workflow flag"]
+        S1["Stage 1: Intent Analysis"]
+        S2["Stage 2: Info Retrieval"]
+        S3["Stage 3: Response Gen"]
+    end
+    
+    U --> R
+    R -->|"compositeKey:<br/>user_123_critical_bug"| WF
+    WF -->|"Returns: combo_b"| R
+    
+    R --> S1
+    S1 -->|"Check with combo_b"| S1F
+    S1F -->|"Returns: intent_v2 config"| S1
+    
+    S1 --> S2
+    S2 -->|"Check with combo_b"| S2F
+    S2F -->|"Returns: rag_v1 config"| S2
+    
+    S2 --> S3
+    S3 -->|"Check with combo_b"| S3F
+    S3F -->|"Returns: structured_v1 config"| S3
+    
+    classDef platform fill:#e3f2fd,stroke:#1976d2
+    classDef app fill:#f3e5f5,stroke:#7b1fa2
+    
+    class WF,S1F,S2F,S3F platform
+    class U,R,S1,S2,S3 app
+```
+
+### The Magic: Composite Key Strategy
+
+**Core Concept**: Each user's journey through the workflow is tracked by a composite key: `${userId}_${workflowKey}`
+
+When the same user encounters the same workflow type:
+1. **Workflow Flag** assigns them to a specific combo (e.g., `combo_b`)
+2. **Each Stage Flag** sees the combo context and returns the corresponding prompt version
+3. All stages coordinate automatically to deliver a **consistent cross-stage experience**
+
+**Example**:
+- User `alice_123` + Workflow `critical_bug` → Assigned to `combo_b`
+- Stage 1 sees `combo_b` → Returns `intent_v2` configuration
+- Stage 2 sees `combo_b` → Returns `rag_v1` configuration
+- Stage 3 sees `combo_b` → Returns `structured_v1` configuration
+- Result: Alice consistently gets the "Optimized Critical Bug Response" combination
+
+### Flexible Workflow Assignment Strategies
+
+The **Workflow Flag** (Agent Flag) provides powerful, fully customizable assignment logic:
+
+#### 1. **Hash-Based Random Distribution**
+Evenly distribute users across workflow combinations using consistent hashing:
+
+```json
+{
+  "targeting": {
+    "defaultRollout": [
+      { "id": "combo_a", "rollout": [0, 33] },      // 33% of users
+      { "id": "combo_b", "rollout": [33, 66] },     // 33% of users
+      { "id": "combo_c", "rollout": [66, 100] }     // 34% of users
+    ]
+  }
+}
+```
+
+- **Consistent**: Same user always gets same combo (based on composite key hash)
+- **Balanced**: Traffic evenly distributed across experiments
+- **Dynamic**: Adjust percentages anytime without code changes
+
+#### 2. **Condition-Based Assignment**
+Route users to specific combos based on custom properties and business logic:
+
+```json
+{
+  "targeting": {
+    "rules": [
+      {
+        "name": "Critical bugs get premium combo",
+        "conditions": [
+          { "property": "inquiryType", "op": "==", "value": "critical_bug" },
+          { "property": "userTier", "op": "in", "values": ["enterprise", "premium"] }
+        ],
+        "variations": [{ "id": "combo_premium", "rollout": [0, 100] }]
+      },
+      {
+        "name": "Mobile users get lightweight combo",
+        "conditions": [
+          { "property": "deviceType", "op": "==", "value": "mobile" }
+        ],
+        "variations": [{ "id": "combo_mobile", "rollout": [0, 100] }]
+      },
+      {
+        "name": "Beta testers get experimental combo",
+        "conditions": [
+          { "property": "userSegment", "op": "==", "value": "beta_tester" }
+        ],
+        "variations": [
+          { "id": "combo_experimental", "rollout": [0, 50] },  // 50% of beta testers
+          { "id": "combo_stable", "rollout": [50, 100] }       // 50% baseline
+        ]
+      }
+    ],
+    "defaultRollout": [
+      { "id": "combo_baseline", "rollout": [0, 100] }  // Everyone else
+    ]
+  }
+}
+```
+
+**Supported Condition Operators**:
+- `==`, `!=`: Exact match / not match
+- `in`, `not in`: List membership
+- `>`, `>=`, `<`, `<=`: Numeric comparisons
+- `contains`, `starts with`, `ends with`: String matching
+- `regex`: Pattern matching
+
+#### 3. **Hybrid Strategies**
+Combine conditions with percentage rollouts for sophisticated control:
+
+```json
+{
+  "targeting": {
+    "rules": [
+      {
+        "name": "Gradually rollout new combo to US users",
+        "conditions": [
+          { "property": "country", "op": "==", "value": "US" }
+        ],
+        "variations": [
+          { "id": "combo_new", "rollout": [0, 20] },        // 20% US users
+          { "id": "combo_baseline", "rollout": [20, 100] }  // 80% US users
+        ]
+      }
+    ],
+    "defaultRollout": [
+      { "id": "combo_baseline", "rollout": [0, 100] }  // Non-US users
+    ]
+  }
+}
+```
+
+**Real-World Use Cases**:
+- **A/B Testing**: Random 50/50 split for unbiased comparison
+- **Canary Rollout**: Start with 5% → 20% → 50% → 100% based on performance
+- **Geo-Targeting**: Different combos for different regions/languages
+- **Customer Tier**: Premium features for paying customers
+- **Time-Based**: Different combos during peak/off-peak hours
+- **Risk Mitigation**: Route high-risk users to stable combo, others to experimental
+
+**The Power**: All of this is **configured through the dashboard or API**—no code changes required. Adjust strategies in real-time based on emerging patterns and business needs.
+
+### What Gets Stored in Feature Flags
+
+**Workflow-Level Flag** (defines combinations):
+```json
+{
+  "combo": "combo_b",
+  "name": "Optimized Critical Bug Handler",
+  "description": "Intent_v2 + RAG + Structured response for urgent issues"
+}
+```
+
+**Stage-Level Flags** (define prompt configurations):
+```json
+{
+  "version": "intent_v2",
+  "model": "gpt-4",
+  "temperature": 0.5,
+  "systemPromptUrl": "https://cdn.company.com/prompts/intent-v2-system.txt",
+  "userPromptUrl": "https://cdn.company.com/prompts/intent-v2-user.txt"
+}
+```
+
+### Key Benefits
+
+#### 1. **Zero-Code Experimentation**
+After initial integration, **all changes happen via dashboard or API**:
+- ✅ Create new combo → Add workflow flag variation
+- ✅ Update prompts → Upload new file, update URL in flag
+- ✅ Test new strategy → Add stage flag variation
+- ✅ Adjust traffic → Change rollout percentages
+- ✅ Rollback instantly → Switch flag variation
+- ❌ **No code deployment needed**
+
+#### 2. **Safe Isolated Testing**
+```json
+// Test new combo with just 5% traffic
+"defaultRollout": [
+  { "combo_a": [0, 80] },      // 80% on baseline
+  { "combo_b": [80, 95] },     // 15% on optimized
+  { "combo_experimental": [95, 100] }  // 5% on new test
+]
+```
+
+#### 3. **Remote Prompt Management**
+Prompts live in **remote storage** (S3, CDN, GitHub), not in code:
+- Update prompt content without deployment
+- Version control your prompts separately
+- A/B test prompt wording instantly
+- Autonomous optimizers can generate and deploy new prompts via API
+
+#### 4. **Autonomous Optimization Integration**
+```javascript
+// AI optimizer can automatically:
+// 1. Create new prompt variations via API
+// 2. Upload optimized prompts to CDN
+// 3. Update flag configurations
+// 4. Gradually increase traffic to winning combinations
+// All without human intervention or code deployment
+```
+
+### The Power of "Integrate Once"
+
+```mermaid
+timeline
+    title Workflow Evolution After Initial Integration
+    
+    Day 1 : ✅ Integrate FeatBit SDK (one-time code deployment)
+          : Deploy baseline combo (100% traffic)
+    
+    Week 2 : 🎯 Create combo_b via dashboard (no code)
+           : Test with 20% traffic
+           : Upload optimized prompts to CDN
+    
+    Week 4 : 📈 combo_b shows +15% performance
+           : Increase to 60% traffic (flag update)
+           : Create combo_c for mobile users
+    
+    Week 6 : 🤖 AI optimizer suggests combo_d
+           : Auto-uploads new prompts
+           : Auto-creates flag variation
+           : Starts 5% shadow test
+    
+    Week 8 : ✨ combo_d validated and promoted
+           : Now serving 4 active combinations
+           : Zero code deployments since Day 1
+```
+
+### Why This Changes Everything
+
+| Traditional Approach | Agent Flag Approach |
+|---------------------|---------------------|
+| New prompt = Code change + deployment | New prompt = Upload file + update URL |
+| New combo = Complex code logic | New combo = Add flag variation |
+| A/B test = Custom routing code | A/B test = Adjust percentages |
+| Rollback = Emergency deployment | Rollback = Click button |
+| Iterations per month = 2-4 | Iterations per month = 20-40 |
+| **Time to test new idea** = **Days** | **Time to test new idea** = **Minutes** |
 
 ---
 
@@ -394,3 +723,418 @@ Agent Flag transforms AI workflow management from reactive to proactive, from mo
 5. **Continuous Evolution**: Never stop improving - every interaction feeds the optimization loop, refining prompt selection at every stage
 
 This is the future of AI product development: intelligent, adaptive, and relentlessly focused on delivering the best possible experience to every user through **precise stage-level prompt orchestration** within consistent workflow structures.
+
+---
+
+## Appendix: Code Implementation with FeatBit Node SDK
+
+After seeing the power of Agent Flag, you might think the implementation would be complex. **It's not.** Here's the surprisingly simple code that enables all of this.
+
+### Approach 1: Fixed Workflow Implementation
+
+Perfect for structured workflows like customer support with predefined stages.
+
+#### One-Time Setup (20 lines of code)
+
+```bash
+npm install featbit-node-server-sdk
+```
+
+```javascript
+// Initialize FeatBit (app startup - once)
+const fbClient = require('featbit-node-server-sdk');
+const client = new fbClient.FbClientBuilder()
+  .sdkKey('your-sdk-key')
+  .build();
+
+await client.waitForInitialization();
+```
+
+### Core Workflow Router (30 lines of core logic)
+
+```javascript
+async function executeWorkflow(userId, workflowKey, context) {
+  // Build user with composite key
+  const user = {
+    key: userId,
+    customProperties: {
+      compositeKey: `${userId}_${workflowKey}`,
+      ...context  // inquiry type, urgency, etc.
+    }
+  };
+  
+  // Get assigned combo
+  const combo = await client.variation('customer-support-workflow', user, {combo: 'baseline'});
+  
+  // Execute each stage with combo context
+  const userWithCombo = { 
+    ...user, 
+    customProperties: { ...user.customProperties, combo: combo.combo }
+  };
+  
+  const stage1 = await executeStage(client, 'intent-analysis', userWithCombo);
+  const stage2 = await executeStage(client, 'retrieval-strategy', userWithCombo);
+  const stage3 = await executeStage(client, 'response-generation', userWithCombo);
+  
+  return stage3;
+}
+
+async function executeStage(client, flagKey, user) {
+  // Get stage configuration from flag
+  const config = await client.variation(flagKey, user, {});
+  
+  // Load prompt from remote URL (CDN, S3, etc.)
+  const prompt = await fetch(config.systemPromptUrl).then(r => r.text());
+  
+  // Execute LLM with config
+  return callLLM({
+    model: config.model,
+    prompt: prompt,
+    temperature: config.temperature
+  });
+}
+```
+
+### Usage (3 lines)
+
+```javascript
+app.post('/support', async (req, res) => {
+  const result = await executeWorkflow(req.body.userId, 'support', req.body.context);
+  res.json(result);
+});
+```
+
+---
+
+### Approach 2: Dynamic Agent Implementation (Tool-Based)
+
+Perfect for agentic systems like Claude Code where the agent dynamically selects tools/skills/MCPs.
+
+#### Setup: Feature Flag as an Agent Tool
+
+```javascript
+// Define FeatBit as a tool available to the agent
+const agentTools = [
+  {
+    name: "get_skill_config",
+    description: "Get configuration for a specific skill or tool based on current experiment assignment. Returns version info, prompt URLs, and parameters.",
+    parameters: {
+      skillName: "string (required) - Name of skill (e.g., 'code_search', 'git_operations')",
+      userId: "string (required) - Current user ID",
+      context: "object (optional) - Additional context (task type, language, etc.)"
+    },
+    function: async (skillName, userId, context = {}) => {
+      const user = {
+        key: userId,
+        customProperties: {
+          compositeKey: `${userId}_${context.taskType || 'default'}`,
+          ...context
+        }
+      };
+      
+      // Agent queries feature flag to get assigned skill version
+      const config = await client.variation(
+        `agent-skill-${skillName}`,
+        user,
+        { version: 'v1', enabled: true }
+      );
+      
+      return {
+        skillName,
+        version: config.version,
+        enabled: config.enabled,
+        config: config.parameters,
+        promptUrl: config.promptUrl
+      };
+    }
+  },
+  
+  {
+    name: "get_agent_toolset",
+    description: "Get the complete set of tools/skills/MCPs assigned to this agent session based on user segment and experiment.",
+    parameters: {
+      userId: "string (required)",
+      taskType: "string (required) - Type of task (e.g., 'coding', 'debugging', 'refactoring')"
+    },
+    function: async (userId, taskType) => {
+      const user = {
+        key: userId,
+        customProperties: {
+          compositeKey: `${userId}_${taskType}`,
+          taskType
+        }
+      };
+      
+      // Get assigned toolset combination
+      const toolset = await client.variation(
+        'agent-toolset',
+        user,
+        { combo: 'baseline' }
+      );
+      
+      // toolset.combo returns something like "performance_combo" or "experimental_combo"
+      // which determines which tool versions are active
+      
+      return {
+        combo: toolset.combo,
+        description: toolset.description,
+        availableTools: toolset.tools,  // List of enabled tool names
+        configurations: toolset.configs  // Configurations for each tool
+      };
+    }
+  }
+];
+```
+
+#### Agent Execution Flow
+
+```javascript
+// Agent runtime
+async function runAgentTask(userId, task, taskType) {
+  // 1. Agent initializes and queries its toolset
+  const toolset = await agentTools.find(t => t.name === 'get_agent_toolset')
+    .function(userId, taskType);
+  
+  console.log(`Agent assigned to combo: ${toolset.combo}`);
+  console.log(`Available tools: ${toolset.availableTools.join(', ')}`);
+  
+  // 2. During execution, agent dynamically queries specific tool configs
+  // When agent decides to use code_search:
+  const codeSearchConfig = await agentTools.find(t => t.name === 'get_skill_config')
+    .function('code_search', userId, { taskType, language: 'python' });
+  
+  if (!codeSearchConfig.enabled) {
+    // Fall back to different tool or strategy
+    console.log('Code search v2 not available, using fallback');
+  }
+  
+  // 3. Agent uses the configured tool version
+  const searchResults = await executeSkill(
+    'code_search',
+    codeSearchConfig.version,
+    codeSearchConfig.config,
+    task
+  );
+  
+  return searchResults;
+}
+```
+
+#### Feature Flag Configuration for Agent Tools
+
+```json
+{
+  "flagKey": "agent-toolset",
+  "variations": [
+    {
+      "id": "baseline",
+      "value": {
+        "combo": "baseline",
+        "description": "Standard toolset",
+        "tools": ["code_search_v1", "git_mcp_v1", "debug_v1"],
+        "configs": {
+          "code_search_v1": { "method": "keyword", "maxResults": 10 },
+          "git_mcp_v1": { "operations": ["read", "status"] }
+        }
+      }
+    },
+    {
+      "id": "performance",
+      "value": {
+        "combo": "performance",
+        "description": "Optimized for speed and accuracy",
+        "tools": ["code_search_semantic_v2", "git_mcp_enhanced_v2", "debug_v1"],
+        "configs": {
+          "code_search_semantic_v2": { "method": "semantic", "maxResults": 20, "useEmbeddings": true },
+          "git_mcp_enhanced_v2": { "operations": ["read", "status", "diff", "blame"] }
+        }
+      }
+    },
+    {
+      "id": "experimental",
+      "value": {
+        "combo": "experimental",
+        "description": "Testing new AI-powered tools",
+        "tools": ["code_search_semantic_v2", "git_mcp_v1", "debug_ai_v2"],
+        "configs": {
+          "code_search_semantic_v2": { "method": "hybrid", "maxResults": 30 },
+          "debug_ai_v2": { "useAIAnalysis": true, "model": "gpt-4" }
+        }
+      }
+    }
+  ],
+  "targeting": {
+    "rules": [
+      {
+        "conditions": [{ "property": "userTier", "op": "==", "value": "premium" }],
+        "variations": [{ "id": "performance", "rollout": [0, 100] }]
+      },
+      {
+        "conditions": [{ "property": "betaTester", "op": "==", "value": true }],
+        "variations": [
+          { "id": "experimental", "rollout": [0, 30] },
+          { "id": "performance", "rollout": [30, 100] }
+        ]
+      }
+    ],
+    "defaultRollout": [
+      { "id": "baseline", "rollout": [0, 70] },
+      { "id": "performance", "rollout": [70, 100] }
+    ]
+  }
+}
+```
+
+#### Real-World Agent Scenario
+
+**Claude Code Assistant Example**:
+```javascript
+// Claude is working on a Python refactoring task
+// It queries available tools via feature flag
+
+const toolset = await get_agent_toolset('user_456', 'refactoring');
+// Returns: { combo: 'performance', tools: [...] }
+
+// Claude decides it needs code search
+const searchConfig = await get_skill_config('code_search', 'user_456', { 
+  taskType: 'refactoring',
+  language: 'python' 
+});
+// Returns: { version: 'semantic_v2', config: { method: 'semantic', ... } }
+
+// Claude uses semantic search v2 (because user is in 'performance' combo)
+const results = await semanticCodeSearch(query, searchConfig.config);
+
+// Later, Claude needs git operations
+const gitConfig = await get_skill_config('git_operations', 'user_456');
+// Returns: { version: 'enhanced_v2', config: { operations: [...] } }
+
+// Claude has access to enhanced git operations (diff, blame, etc.)
+```
+
+**Benefits of Tool-Based Approach**:
+- ✅ Agent dynamically queries current configuration at runtime
+- ✅ No hard-coded tool versions in agent logic
+- ✅ Experiment with different tool combinations without redeploying agent
+- ✅ A/B test which MCP/skill versions work better for specific task types
+- ✅ Gradually roll out new tool versions to subset of users
+- ✅ Agent adapts to user segment automatically (premium gets better tools)
+
+---
+
+### Comparison: Fixed Workflow vs Dynamic Agent
+
+| Aspect | Fixed Workflow | Dynamic Agent (Tool-Based) |
+|--------|----------------|---------------------------|
+| **Use Case** | Structured, predefined stages | Flexible, agent-driven decisions |
+| **Integration** | Workflow router queries flags at stage boundaries | Agent queries flags as tools during execution |
+| **Configuration** | Stage-level prompt configs | Tool/skill/MCP version configs |
+| **Example** | Customer support (Intent → Retrieval → Response) | Claude Code (dynamically chooses skills/MCPs) |
+| **Complexity** | Lower - fixed structure | Higher - dynamic routing |
+| **Flexibility** | Medium - can change stage prompts | High - agent adapts in real-time |
+
+**Both approaches share**:
+- ✅ Zero-code experimentation after initial integration
+- ✅ Percentage-based traffic routing
+- ✅ Instant rollbacks
+- ✅ Remote configuration updates
+- ✅ A/B testing infrastructure
+- ✅ Ready for autonomous optimization
+
+---
+
+### That's It for Both Approaches! 🎉
+
+**Total code for Fixed Workflow**: ~50 lines
+**Total code for Dynamic Agent**: ~80 lines (includes tool definitions)
+
+**What you get**:
+- ✅ Multi-stage workflow orchestration
+- ✅ Cross-stage prompt combination management
+- ✅ Percentage-based traffic routing
+- ✅ Instant rollbacks
+- ✅ Remote prompt updates (no deployment)
+- ✅ A/B testing infrastructure
+- ✅ Ready for autonomous optimization
+
+**What you never write again**:
+- ❌ Complex routing logic
+- ❌ Percentage-based distribution code
+- ❌ A/B test infrastructure
+- ❌ Configuration deployment pipelines
+- ❌ Rollback mechanisms
+
+### Example Flag Configurations
+
+**Workflow Flag** (defines combos):
+```json
+{
+  "flagKey": "customer-support-workflow",
+  "variations": [
+    { "id": "combo_a", "value": { "combo": "combo_a" } },
+    { "id": "combo_b", "value": { "combo": "combo_b" } }
+  ],
+  "targeting": {
+    "rules": [{
+      "conditions": [{ "property": "inquiryType", "op": "==", "value": "critical" }],
+      "variations": [{ "id": "combo_b", "rollout": [0, 100] }]
+    }],
+    "defaultRollout": [
+      { "id": "combo_a", "rollout": [0, 80] },
+      { "id": "combo_b", "rollout": [80, 100] }
+    ]
+  }
+}
+```
+
+**Stage Flag** (defines prompt versions):
+```json
+{
+  "flagKey": "intent-analysis",
+  "variations": [
+    {
+      "id": "v1",
+      "value": {
+        "model": "gpt-4",
+        "temperature": 0.7,
+        "systemPromptUrl": "https://cdn.company.com/prompts/intent-v1.txt"
+      }
+    },
+    {
+      "id": "v2",
+      "value": {
+        "model": "gpt-4",
+        "temperature": 0.5,
+        "systemPromptUrl": "https://cdn.company.com/prompts/intent-v2.txt"
+      }
+    }
+  ],
+  "targeting": {
+    "rules": [{
+      "conditions": [{ "property": "combo", "op": "in", "values": ["combo_b"] }],
+      "variations": [{ "id": "v2", "rollout": [0, 100] }]
+    }],
+    "defaultVariation": "v1"
+  }
+}
+```
+
+**Remote Prompt File** (https://cdn.company.com/prompts/intent-v2.txt):
+```text
+You are a customer support AI. Classify inquiries as:
+- CRITICAL: Production issues
+- FEATURE: How-to questions  
+- INTEGRATION: API/SDK help
+- QUICK: Yes/no questions
+
+Respond in JSON: {"category": "...", "urgency": "...", "confidence": 0.9}
+```
+
+### Key Insight
+
+The **simplicity** of the code enables the **complexity** of the experimentation:
+- 50 lines of code → Infinite experimentation possibilities
+- One integration → Continuous optimization
+- Zero deployments → Unlimited iterations
+
+**This is why Agent Flag changes everything**: The implementation is trivially simple, but the capabilities are boundlessly powerful.
