@@ -6,6 +6,16 @@ Optimizing multi-stage AI workflows isn't about finding the perfect prompt—it'
 
 **Read the full article**: [insights-bh.md](insights-bh.md)
 
+## 🚀 Try the Demo
+
+Want to see Agent Flag in action? Check out our **[TypeScript Demo Agent](demo-agent/)** - a simple, runnable example showing:
+- ✅ Multi-stage AI workflow orchestration
+- ✅ Feature flag-based prompt combination management  
+- ✅ A/B testing different prompt strategies
+- ✅ User segmentation and targeting
+
+**[Get started in 5 minutes →](demo-agent/QUICKSTART.md)**
+
 ---
 
 ## Table of Contents

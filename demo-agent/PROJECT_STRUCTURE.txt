@@ -1,0 +1,20 @@
+demo-agent/
+├── src/
+│   ├── stages/
+│   │   ├── intent-analysis.ts      # Stage 1: Intent classification
+│   │   ├── info-retrieval.ts       # Stage 2: Knowledge retrieval
+│   │   └── response-generation.ts  # Stage 3: Response generation
+│   ├── config.ts                   # FeatBit configuration
+│   ├── types.ts                    # TypeScript type definitions
+│   ├── featbit-client.ts          # FeatBit SDK initialization
+│   ├── workflow.ts                 # Main workflow orchestration
+│   └── index.ts                    # Demo entry point
+├── dist/                           # Compiled JavaScript (generated)
+├── node_modules/                   # Dependencies (generated)
+├── .env.example                    # Environment variables template
+├── .gitignore                      # Git ignore rules
+├── package.json                    # NPM package configuration
+├── tsconfig.json                   # TypeScript configuration
+├── README.md                       # Main documentation
+├── QUICKSTART.md                   # Quick start guide
+└── FEATBIT_FLAGS.md               # FeatBit flag configurations
