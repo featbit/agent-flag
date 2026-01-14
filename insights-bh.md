@@ -304,57 +304,82 @@ Rather than forcing all users through a single "optimal" prompt combination, Age
 
 ### Real-World Example
 
-**Scenario**: A SaaS company's customer support AI assistant handles technical inquiries through a fixed 3-stage workflow:
-- **Stage 1**: Intent Analysis - Classify user intent (bug report, feature request, how-to question)
+**Scenario**: A SaaS company's customer support AI assistant handles different types of technical inquiries through a fixed 3-stage workflow:
+- **Stage 1**: Intent Analysis - Classify the inquiry type and urgency
 - **Stage 2**: Information Retrieval - Fetch relevant documentation, past tickets, or knowledge base articles
 - **Stage 3**: Response Generation - Synthesize information into a helpful response
 
-Each stage has multiple prompt versions and strategy variants. Agent Flag routes different user segments to optimal combinations:
+Each stage has multiple prompt versions and strategy variants. Agent Flag routes inquiries to optimal combinations based on **inquiry type and context**:
+
+#### Segment-Specific Prompt Combinations
+
+| User Segment | Use Case | Combo | Stage 1 | Stage 2 | Stage 3 | Results |
+|--------------|----------|-------|---------|---------|---------|---------|
+| **Critical Bug Reports**<br/>15% of traffic | Production issues requiring immediate escalation | **Combo A** | `Intent_Priority_v2`<br/>(urgency detection) | `Retrieval_Similar_Bugs_v1`<br/>(issue tracking search) | `Response_Escalation_v1`<br/>(action-oriented) | Resolution: 85%<br/>Satisfaction: 4.8/5<br/>Tokens: 2.1K<br/>Latency: 2.5s |
+| **Feature Questions**<br/>50% of traffic | "How do I use feature X?" queries | **Combo B** | `Intent_v2`<br/>(feature classification) | `Retrieval_Docs_v2`<br/>(documentation search) | `Response_Tutorial_v2`<br/>(step-by-step guide) | Resolution: 72%<br/>Satisfaction: 4.3/5<br/>Tokens: 1.6K<br/>Latency: 2.0s |
+| **Integration Setup**<br/>25% of traffic | API, SDK, or third-party integration help | **Combo C** | `Intent_v2`<br/>(tech classification) | `Retrieval_RAG_v1`<br/>(code-aware search) | `Response_Code_Examples_v1`<br/>(with snippets) | Resolution: 78%<br/>Satisfaction: 4.6/5<br/>Tokens: 3.2K<br/>Latency: 3.5s |
+| **Quick Clarifications**<br/>10% of traffic | Simple yes/no or definition questions | **Combo D** | `Intent_Quick_v1`<br/>(fast classification) | `Retrieval_FAQ_v1`<br/>(FAQ-only search) | `Response_Concise_v1`<br/>(one-paragraph) | Resolution: 68%<br/>Satisfaction: 4.0/5<br/>Tokens: 580<br/>Latency: 1.2s |
+
+**Visual Flow:**
 
 ```mermaid
-graph TB
-    subgraph Segment1["Tech-Savvy Users (Developers) - 25%"]
-        direction LR
-        F1["Combo A<br/>━━━━━━━━━━━<br/>Stage 1: Intent_v2 (detailed classification)<br/>Stage 2: Retrieval_RAG_v1 (code-aware search)<br/>Stage 3: Response_Technical_v1 (with code snippets)<br/>━━━━━━━━━━━<br/>Resolution: 78% | Satisfaction: 4.5/5<br/>Avg Tokens: 2.8K | Latency: 3.2s"]
+graph LR
+    subgraph Input["Incoming Support Inquiries"]
+        I1["🚨 Critical Bug:<br/>'App crashing on iOS 16'"]
+        I2["❓ Feature Question:<br/>'How to export data?'"]
+        I3["🔧 Integration Help:<br/>'REST API auth error'"]
+        I4["💬 Quick Q:<br/>'Is feature X available?'"]
     end
     
-    subgraph Segment2["Business Users (PMs, Analysts) - 50%"]
-        direction LR
-        F2["Combo B<br/>━━━━━━━━━━━<br/>Stage 1: Intent_v2 (business-focused)<br/>Stage 2: Retrieval_v2 (documentation-focused)<br/>Stage 3: Response_v2 (executive summary style)<br/>━━━━━━━━━━━<br/>Resolution: 65% | Satisfaction: 4.2/5<br/>Avg Tokens: 1.5K | Latency: 2.1s"]
+    subgraph Router["Agent Flag Router"]
+        R{Context-Based<br/>Routing}
     end
     
-    subgraph Segment3["Enterprise Admins - 15%"]
-        direction LR
-        F3["Combo C<br/>━━━━━━━━━━━<br/>Stage 1: Intent_v1 (compliance-aware)<br/>Stage 2: Retrieval_v1 (security doc prioritized)<br/>Stage 3: Response_Formal_v1 (audit-friendly)<br/>━━━━━━━━━━━<br/>Resolution: 82% | Satisfaction: 4.7/5<br/>Avg Tokens: 2.2K | Latency: 2.8s"]
+    subgraph Combos["3-Stage Workflow Combinations"]
+        C1["Combo A<br/>Priority + Bug Search + Escalation"]
+        C2["Combo B<br/>Intent + Docs + Tutorial"]
+        C3["Combo C<br/>Tech + RAG + Code Examples"]
+        C4["Combo D<br/>Quick + FAQ + Concise"]
     end
     
-    subgraph Segment4["Mobile Users - 10%"]
-        direction LR
-        F4["Combo D<br/>━━━━━━━━━━━<br/>Stage 1: Intent_Quick_v1 (fast classification)<br/>Stage 2: Retrieval_v2 (top-3 results only)<br/>Stage 3: Response_Concise_v1 (mobile-optimized)<br/>━━━━━━━━━━━<br/>Resolution: 58% | Satisfaction: 3.9/5<br/>Avg Tokens: 680 | Latency: 1.4s"]
-    end
+    I1 --> R
+    I2 --> R
+    I3 --> R
+    I4 --> R
     
-    classDef best fill:#d4edda,stroke:#28a745
-    classDef good fill:#fff3cd,stroke:#ffc107
-    classDef okay fill:#f8d7da,stroke:#dc3545
+    R -->|85% resolution| C1
+    R -->|72% resolution| C2
+    R -->|78% resolution| C3
+    R -->|68% resolution| C4
     
-    class F3 best
-    class F1,F2 good
-    class F4 okay
+    classDef input fill:#e3f2fd,stroke:#1976d2
+    classDef router fill:#fff3e0,stroke:#f57c00
+    classDef combo fill:#f3e5f5,stroke:#7b1fa2
+    
+    class I1,I2,I3,I4 input
+    class R router
+    class C1,C2,C3,C4 combo
 ```
 
-**Key Insight**: All segments go through the **same 3-stage workflow structure** (Intent Analysis → Information Retrieval → Response Generation), but each stage selects different prompt versions based on user context.
+**Key Insights**: 
+- All inquiries flow through the **same 3-stage workflow structure** (Intent Analysis → Information Retrieval → Response Generation)
+- Each inquiry type gets routed to the optimal stage-prompt combination based on its characteristics
+- **Critical bugs** use priority detection + similar bug search + escalation prompts for fastest resolution
+- **Feature questions** use standard docs search + tutorial-style responses for self-service
+- **Integration help** uses RAG-enhanced retrieval + code examples for technical users
+- **Quick clarifications** use lightweight FAQ search + concise responses for efficiency
 
-**Detailed Breakdown**:
-- **Developers** get technical, code-aware responses with RAG-enhanced retrieval → High satisfaction, higher token cost acceptable
-- **Business Users** get concise, actionable summaries optimized for quick decisions → Balanced performance and cost
-- **Enterprise Admins** get formal, compliance-ready responses with audit trails → Highest resolution rate for critical queries
-- **Mobile Users** get ultra-fast, concise responses optimized for small screens → Lower resolution but acceptable for on-the-go usage
+**Business Outcome**: 
 
-**Business Outcome**: Instead of forcing all users through a single "average" prompt combination (baseline: 68% resolution, 4.1/5 satisfaction, 1.8K tokens), each segment gets its optimal stage-prompt pairing:
-- **Overall resolution rate improved to 71%** (from 68%)
-- **Overall satisfaction improved to 4.3/5** (from 4.1/5)
-- **Cost optimized**: High-value users (Enterprise Admins, Developers) use premium combos; mobile users use efficient combos
-- **Total token efficiency**: 15% cost reduction through segment-specific optimization
+| Metric | Before Agent Flag<br/>(Single combo for all) | After Agent Flag<br/>(Segmented combos) | Improvement |
+|--------|----------------------------------------------|----------------------------------------|-------------|
+| **Overall Resolution Rate** | 70% | 76% | **+6 percentage points** |
+| **Avg Satisfaction Score** | 4.2/5 | 4.5/5 | **+7% improvement** |
+| **Critical Bug Response Time** | 4.5s | 2.5s | **44% faster** |
+| **Avg Token Cost per Query** | 1,850 tokens | 1,620 tokens | **12% cost reduction** |
+| **Monthly Support Ticket Deflection** | 12,000 tickets | 15,800 tickets | **+3,800 tickets saved** |
+
+By matching each inquiry type to its optimal prompt combination, the company achieved better outcomes while reducing costs through intelligent routing.
 
 ---
 
