@@ -191,7 +191,7 @@ sequenceDiagram
     participant OT as OpenTelemetry
     participant LF as Langfuse
     participant PM as Product Metrics
-    participant OPT as Optimization Engine
+    participant Engine as Optimization Engine
     
     AF->>OT: Deploy Combo A (20%)
     AF->>OT: Deploy Combo B (80%)
@@ -199,17 +199,17 @@ sequenceDiagram
     loop Every 5 minutes
         OT->>LF: Collect token usage
         OT->>PM: Collect conversion data
-        LF->>OPT: Combo A: 1.2K tokens/req
-        LF->>OPT: Combo B: 800 tokens/req
-        PM->>OPT: Combo A: 12% conversion
-        PM->>OPT: Combo B: 15% conversion
+        LF->>Engine: Combo A: 1.2K tokens/req
+        LF->>Engine: Combo B: 800 tokens/req
+        PM->>Engine: Combo A: 12% conversion
+        PM->>Engine: Combo B: 15% conversion
         
-        OPT->>OPT: Analyze: B wins on both metrics
-        OPT->>AF: Recommend: Increase B to 95%
+        Engine->>Engine: Analyze: B wins on both metrics
+        Engine->>AF: Recommend: Increase B to 95%
         AF->>AF: Auto-adjust rollout
     end
     
-    OPT-->>AF: Final: Promote Combo B to 100%
+    Engine-->>AF: Final: Promote Combo B to 100%
 ```
 
 ---
