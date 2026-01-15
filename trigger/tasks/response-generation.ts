@@ -9,6 +9,9 @@ import { azure, azureModel } from "../config/azure";
 
 export const generateResponseTask = task({
   id: "generate-response",
+  machine: {
+    preset: "small-1x",
+  },
   retry: {
     maxAttempts: 3,
     minTimeoutInMs: 1000,
@@ -22,12 +25,6 @@ export const generateResponseTask = task({
     inquiryId: string;
   }) => {
     const { intent, retrieval, config, inquiryId } = payload;
-
-    logger.info("✍️ Stage 3: Response Generation starting", {
-      inquiryId,
-      strategy: config.strategy,
-      documentCount: retrieval.documents.length,
-    });
 
     try {
       const isStructured = config.strategy === 'structured';
@@ -48,19 +45,16 @@ Sources: ${retrieval.sources.join(', ')}
 
 Generate a concise, professional response explaining how we can help.`;
 
+      // Reasoning models (o1, o3, gpt-5.x) don't support temperature parameter
+      const isReasoningModel = (config.model || azureModel).match(/o1|o3|gpt-5/i);
+      
       const { text, usage } = await generateText({
         model: azure(config.model || azureModel),
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Generate a ${isStructured ? 'structured JSON' : 'text'} response for this support inquiry.` }
         ],
-        temperature: config.temperature,
-      });
-
-      logger.info("🤖 LLM Response received", {
-        tokens: usage,
-        responseLength: text.length,
-        format: isStructured ? 'structured' : 'text',
+        ...(isReasoningModel ? {} : { temperature: config.temperature }),
       });
 
       let result: ResponseResult;
@@ -83,11 +77,6 @@ Generate a concise, professional response explaining how we can help.`;
           format: 'text'
         };
       }
-
-      logger.info("✅ Response Generation complete", {
-        format: result.format,
-        messageLength: result.message.length,
-      });
 
       return result;
     } catch (error) {

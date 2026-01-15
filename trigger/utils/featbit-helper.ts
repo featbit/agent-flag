@@ -20,17 +20,14 @@ export async function initFeatBitClient(): Promise<IFbClient> {
     throw new Error('FEATBIT_SDK_KEY environment variable is required');
   }
 
-  logger.info('🔧 Initializing FeatBit client...');
-
   const client = new FbClientBuilder()
     .sdkKey(FEATBIT_CONFIG.sdkKey)
     .streamingUri(FEATBIT_CONFIG.streamingUri)
     .eventsUri(FEATBIT_CONFIG.eventsUri)
+    .logLevel('error')
     .build();
 
   await client.waitForInitialization();
-
-  logger.info('✅ FeatBit client initialized');
 
   globalFbClient = client;
   return client;
@@ -51,10 +48,8 @@ export function getFeatBitClient(): IFbClient {
  */
 export async function closeFeatBitClient(): Promise<void> {
   if (globalFbClient) {
-    logger.info('🔒 Closing FeatBit client...');
     await globalFbClient.close();
     globalFbClient = null;
-    logger.info('✅ FeatBit client closed');
   }
 }
 
@@ -77,6 +72,7 @@ export async function createFbClientFromConfig(config: FbClientConfig): Promise<
     .sdkKey(config.sdkKey)
     .streamingUri(config.streamingUri || 'wss://global-eval.featbit.co')
     .eventsUri(config.eventsUri || 'https://global-eval.featbit.co')
+    .logLevel('error')
     .build();
 
   await client.waitForInitialization();

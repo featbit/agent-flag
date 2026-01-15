@@ -33,6 +33,9 @@ const DEFAULT_CONFIGS = {
 
 export const processCustomerInquiry = task({
   id: "process-customer-inquiry",
+  machine: {
+    preset: "small-1x",
+  },
   retry: {
     maxAttempts: 5,
     minTimeoutInMs: 2000,
@@ -61,27 +64,37 @@ export const processCustomerInquiry = task({
         "combo_a"
       )) as string;
 
-      logger.info("🎲 Feature Flag Combo Assigned", {
-        combo,
-        userId: inquiry.userId,
-      });
-
       // Step 2: Build User Context with Combo
       const comboContext = new UserBuilder(inquiry.userId)
         .custom("inquiryType", inquiry.type)
         .custom("combo", combo)
         .build();
 
-      // Step 3: Execute Stage 1 - Intent Analysis
+      // Step 3: Get all stage configurations
       const intentConfig = (await fbClient.jsonVariation(
         FLAG_KEYS.intentAnalysis,
         comboContext,
         DEFAULT_CONFIGS.intent
       )) as PromptConfig;
-      logger.info("📋 Stage 1 Config Retrieved", {
-        model: intentConfig.model,
-        temperature: intentConfig.temperature,
+      const retrievalConfig = (await fbClient.jsonVariation(
+        FLAG_KEYS.infoRetrieval,
+        comboContext,
+        DEFAULT_CONFIGS.retrieval
+      )) as PromptConfig;
+      const responseConfig = (await fbClient.jsonVariation(
+        FLAG_KEYS.responseGeneration,
+        comboContext,
+        DEFAULT_CONFIGS.response
+      )) as PromptConfig;
+
+      logger.info(`🎲 Agent Flag 工作流执行策略: ${combo}`, {
+        "组合策略代号": combo,
+        "stage analyze-intent": `版本 ${(intentConfig as any).version || 'default'} (${intentConfig.systemPrompt?.substring(0, 30)}...)`,
+        "stage retrieve-information": `版本 ${(retrievalConfig as any).version || 'default'} (${retrievalConfig.strategy})`,
+        "stage generate-response": `版本 ${(responseConfig as any).version || 'default'} (${responseConfig.strategy})`,
       });
+
+      // Step 4: Execute Stage 1 - Intent Analysis
       const intentHandle = await analyzeIntentTask.triggerAndWait({
         message: inquiry.message,
         config: intentConfig,
@@ -97,22 +110,8 @@ export const processCustomerInquiry = task({
       }
 
       const intent = intentHandle.output;
-      logger.info("✅ Stage 1 Complete", {
-        category: intent.category,
-        urgency: intent.urgency,
-        confidence: intent.confidence,
-      });
 
-      // Step 4: Execute Stage 2 - Information Retrieval
-      const retrievalConfig = (await fbClient.jsonVariation(
-        FLAG_KEYS.infoRetrieval,
-        comboContext,
-        DEFAULT_CONFIGS.retrieval
-      )) as PromptConfig;
-      logger.info("📋 Stage 2 Config Retrieved", {
-        model: retrievalConfig.model,
-        strategy: retrievalConfig.strategy,
-      });
+      // Step 5: Execute Stage 2 - Information Retrieval
       const retrievalHandle = await retrieveInformationTask.triggerAndWait({
         intent,
         config: retrievalConfig,
@@ -129,21 +128,8 @@ export const processCustomerInquiry = task({
       }
 
       const retrieval = retrievalHandle.output;
-      logger.info("✅ Stage 2 Complete", {
-        documentCount: retrieval.documents.length,
-        sources: retrieval.sources.join(", "),
-      });
 
-      // Step 5: Execute Stage 3 - Response Generation
-      const responseConfig = (await fbClient.jsonVariation(
-        FLAG_KEYS.responseGeneration,
-        comboContext,
-        DEFAULT_CONFIGS.response
-      )) as PromptConfig;
-      logger.info("📋 Stage 3 Config Retrieved", {
-        model: responseConfig.model,
-        strategy: responseConfig.strategy,
-      });
+      // Step 6: Execute Stage 3 - Response Generation
       const responseHandle = await generateResponseTask.triggerAndWait({
         intent,
         retrieval,
@@ -159,12 +145,8 @@ export const processCustomerInquiry = task({
       }
 
       const response = responseHandle.output;
-      logger.info("✅ Stage 3 Complete", {
-        format: response.format,
-        messageLength: response.message.length,
-      });
 
-      // Step 6: Return Complete Workflow Result
+      // Step 7: Return Complete Workflow Result
       const executionTimeMs = Date.now() - startTime;
       const result: WorkflowResult = {
         combo,

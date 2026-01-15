@@ -9,6 +9,9 @@ import { azure, azureModel } from "../config/azure";
 
 export const analyzeIntentTask = task({
   id: "analyze-intent",
+  machine: {
+    preset: "small-1x",
+  },
   retry: {
     maxAttempts: 3,
     minTimeoutInMs: 1000,
@@ -23,13 +26,6 @@ export const analyzeIntentTask = task({
   }) => {
     const { message, config, inquiryId, userId } = payload;
 
-    logger.info("🎯 Stage 1: Intent Analysis starting", {
-      inquiryId,
-      userId,
-      model: config.model,
-      temperature: config.temperature,
-    });
-
     try {
       const systemPrompt = config.systemPrompt || 
         `You are a customer support assistant. Analyze the customer inquiry and classify it into one of these categories: CRITICAL, FEATURE, INTEGRATION, QUICK.
@@ -37,18 +33,16 @@ Also determine the urgency level (high, medium, low) and provide a confidence sc
 
 Respond in JSON format: { "category": "CATEGORY", "urgency": "URGENCY", "confidence": 0.95 }`;
 
+      // Reasoning models (o1, o3, gpt-5.x) don't support temperature parameter
+      const isReasoningModel = (config.model || azureModel).match(/o1|o3|gpt-5/i);
+      
       const { text, usage } = await generateText({
         model: azure(config.model || azureModel),
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: message }
         ],
-        temperature: config.temperature,
-      });
-
-      logger.info("🤖 LLM Response received", {
-        tokens: usage,
-        responseLength: text.length,
+        ...(isReasoningModel ? {} : { temperature: config.temperature }),
       });
 
       const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -68,12 +62,6 @@ Respond in JSON format: { "category": "CATEGORY", "urgency": "URGENCY", "confide
           confidence: 0.75
         };
       }
-
-      logger.info("✅ Intent Analysis complete", {
-        category: result.category,
-        urgency: result.urgency,
-        confidence: result.confidence,
-      });
 
       return result;
     } catch (error) {

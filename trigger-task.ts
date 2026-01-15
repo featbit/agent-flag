@@ -14,12 +14,11 @@ import type { processCustomerInquiry } from "./trigger/workflows/customer-inquir
 import { initFeatBitClient } from "./trigger/utils/featbit-helper";
 
 async function triggerCustomerInquiryWorkflow() {
-  console.log("🚀 手动触发客户询问工作流...\n");
+  console.log("🚀 触发工作流...\n");
 
   try {
     // 初始化 FeatBit 客户端
     const fbClient = await initFeatBitClient();
-    console.log("✅ FeatBit 客户端已初始化\n");
 
     // 触发任务
     const handle = await tasks.trigger<typeof processCustomerInquiry>(
@@ -35,14 +34,8 @@ async function triggerCustomerInquiryWorkflow() {
       }
     );
 
-    console.log("✅ 任务已触发!");
-    console.log(`📋 Run ID: ${handle.id}`);
-    console.log(`🔗 查看运行详情: https://cloud.trigger.dev/projects/${process.env.TRIGGER_PROJECT_ID}/runs/${handle.id}\n`);
-
-    console.log("💡 提示:");
-    console.log("   - 任务正在后台运行");
-    console.log("   - 可以在 Trigger.dev 控制台查看实时日志");
-    console.log("   - 访问: https://cloud.trigger.dev/projects/proj_vimroqyctvbzuyhcgzmb");
+    console.log(`✅ 任务已触发 | Run ID: ${handle.id}`);
+    console.log(`🔗 https://cloud.trigger.dev/projects/${process.env.TRIGGER_PROJECT_ID}/runs/${handle.id}`);
 
   } catch (error) {
     console.error("❌ 触发任务失败:", error);

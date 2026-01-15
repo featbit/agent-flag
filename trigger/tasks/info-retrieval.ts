@@ -9,6 +9,9 @@ import { azure, azureModel } from "../config/azure";
 
 export const retrieveInformationTask = task({
   id: "retrieve-information",
+  machine: {
+    preset: "small-1x",
+  },
   retry: {
     maxAttempts: 3,
     minTimeoutInMs: 1000,
@@ -22,13 +25,6 @@ export const retrieveInformationTask = task({
   }) => {
     const { intent, config, inquiryId } = payload;
 
-    logger.info("📚 Stage 2: Information Retrieval starting", {
-      inquiryId,
-      category: intent.category,
-      urgency: intent.urgency,
-      strategy: config.strategy,
-    });
-
     try {
       const systemPrompt = `You are a knowledge base retrieval assistant. Based on the customer inquiry category and urgency, identify relevant knowledge base articles.
 
@@ -39,18 +35,16 @@ Confidence: ${intent.confidence}
 Respond with a JSON array of relevant document IDs and sources.
 Format: { "documents": ["KB-001", "KB-045"], "sources": ["knowledge-base", "vector-db"] }`;
 
+      // Reasoning models (o1, o3, gpt-5.x) don't support temperature parameter
+      const isReasoningModel = (config.model || azureModel).match(/o1|o3|gpt-5/i);
+      
       const { text, usage } = await generateText({
         model: azure(config.model || azureModel),
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Find relevant documents for a ${intent.category} inquiry with ${intent.urgency} urgency.` }
         ],
-        temperature: config.temperature,
-      });
-
-      logger.info("🤖 LLM Response received", {
-        tokens: usage,
-        responseLength: text.length,
+        ...(isReasoningModel ? {} : { temperature: config.temperature }),
       });
 
       const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -81,11 +75,6 @@ Format: { "documents": ["KB-001", "KB-045"], "sources": ["knowledge-base", "vect
               sources: ['knowledge-base']
             };
       }
-
-      logger.info("✅ Information Retrieval complete", {
-        documentCount: result.documents.length,
-        sources: result.sources.join(', '),
-      });
 
       return result;
     } catch (error) {
