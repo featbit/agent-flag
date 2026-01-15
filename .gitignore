@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.trigger/
 *.log
 .env
 .DS_Store

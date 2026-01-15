@@ -3,6 +3,10 @@
     "featbit-mcp-remote": {
       "type": "http",
       "url": "https://mcp.featbit.co/mcp"
+    },
+    "trigger": {
+      "args": ["trigger.dev@4.3.2", "mcp"],
+      "command": "npx"
     }
   }
 }

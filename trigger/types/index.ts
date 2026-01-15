@@ -1,11 +1,6 @@
 /**
- * User context for feature flag evaluation
+ * Type definitions for the AI workflow
  */
-export interface UserContext {
-  userId: string;
-  inquiryType: 'critical' | 'feature' | 'integration' | 'quick';
-  [key: string]: string;
-}
 
 /**
  * Customer inquiry data
@@ -48,7 +43,6 @@ export interface ResponseResult {
 export interface PromptConfig {
   model: string;
   temperature: number;
-  systemPromptUrl?: string;
   systemPrompt?: string;
   strategy?: string;
 }
@@ -62,4 +56,13 @@ export interface WorkflowResult {
   retrieval: RetrievalResult;
   response: ResponseResult;
   executionTimeMs: number;
+}
+
+/**
+ * FeatBit client configuration
+ */
+export interface FbClientConfig {
+  sdkKey: string;
+  streamingUri?: string;
+  eventsUri?: string;
 }
